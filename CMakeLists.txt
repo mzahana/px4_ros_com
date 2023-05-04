@@ -24,6 +24,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 #################
 # Setup targets #
@@ -59,6 +61,16 @@ install(TARGETS debug_vect_advertiser DESTINATION lib/${PROJECT_NAME})
 add_executable(offboard_control src/examples/offboard/offboard_control.cpp)
 ament_target_dependencies(offboard_control rclcpp px4_msgs)
 install(TARGETS offboard_control DESTINATION lib/${PROJECT_NAME})
+
+# src/px4_ros
+add_executable(px4_ros src/px4_ros_node.cpp)
+ament_target_dependencies(px4_ros rclcpp px4_msgs geometry_msgs nav_msgs tf2_ros Eigen3)
+target_link_libraries(px4_ros frame_transforms)
+# target_include_directories(px4_ros PUBLIC
+# 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME}>
+# 	$<INSTALL_INTERFACE:include/${PROJECT_NAME}>
+# )
+install(TARGETS px4_ros DESTINATION lib/${PROJECT_NAME})
 
 
 ############
