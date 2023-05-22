@@ -204,11 +204,13 @@ void
 PX4ROS::rosVisualOdomCallback(const nav_msgs::msg::Odometry & msg)
 {
     px4_msgs::msg::VehicleOdometry px4_odom_msg;
+    // It seems that time is updated automatically on PX4 side
+    // after v1.14
     px4_odom_msg.timestamp = 0; //static_cast<uint64_t>(msg.header.stamp.sec*1e6) + static_cast<uint64_t>(msg.header.stamp.nanosec/1e3);
     px4_odom_msg.timestamp_sample = 0;
 
-    px4_odom_msg.pose_frame = px4_odom_msg.POSE_FRAME_NED;
-    px4_odom_msg.velocity_frame = px4_odom_msg.VELOCITY_FRAME_NED;
+    px4_odom_msg.pose_frame = px4_odom_msg.POSE_FRAME_FRD;
+    px4_odom_msg.velocity_frame = px4_odom_msg.VELOCITY_FRAME_FRD;
 
     // position
     Eigen::Vector3d position_enu(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z);
