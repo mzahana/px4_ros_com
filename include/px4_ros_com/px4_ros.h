@@ -36,6 +36,7 @@ private:
 
     rclcpp::Time last_tf_pub_time_;
     double tf_pub_period_;
+    bool publish_tf_;
 
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
@@ -87,6 +88,9 @@ PX4ROS::PX4ROS(/* args */): Node("px4_ros")
 
     this->declare_parameter("tf_pub_period", 0.05);
     tf_pub_period_ = this->get_parameter("tf_pub_period").get_parameter_value().get<double>();
+
+    this->declare_parameter("publish_tf", true);
+    publish_tf_ = this->get_parameter("publish_tf").get_parameter_value().get<bool>();
    
     odom_pub_ =  this->create_publisher<nav_msgs::msg::Odometry>("px4_ros/odom", 10);
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("px4_ros/pose", 10);
@@ -180,23 +184,26 @@ PX4ROS::px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg)
     pose_pub_->publish(ros_pose_msg_);
 
     // Publish TF
-    rclcpp::Duration elapsed_time = this->get_clock()->now() - last_tf_pub_time_;
-    if (elapsed_time.seconds() > tf_pub_period_)
+    if (publish_tf_)
     {
-        last_tf_pub_time_ = this->get_clock()->now();
-        // @todo publish TF
-        geometry_msgs::msg::TransformStamped t;
-        t.header = ros_odom_msg_.header;
-        t.child_frame_id = std::string(this->get_namespace()) +"/" + baselink_frame_id_;
+        rclcpp::Duration elapsed_time = this->get_clock()->now() - last_tf_pub_time_;
+        if (elapsed_time.seconds() > tf_pub_period_)
+        {
+            last_tf_pub_time_ = this->get_clock()->now();
+            // @todo publish TF
+            geometry_msgs::msg::TransformStamped t;
+            t.header = ros_odom_msg_.header;
+            t.child_frame_id = std::string(this->get_namespace()) +"/" + baselink_frame_id_;
 
-        t.transform.translation.x = ros_pose_msg_.pose.position.x;
-        t.transform.translation.y = ros_pose_msg_.pose.position.y;
-        t.transform.translation.z = ros_pose_msg_.pose.position.z;
-        t.transform.rotation.w = ros_pose_msg_.pose.orientation.w;
-        t.transform.rotation.x = ros_pose_msg_.pose.orientation.x;
-        t.transform.rotation.y = ros_pose_msg_.pose.orientation.y;
-        t.transform.rotation.z = ros_pose_msg_.pose.orientation.z;
-        tf_broadcaster_->sendTransform(t);
+            t.transform.translation.x = ros_pose_msg_.pose.position.x;
+            t.transform.translation.y = ros_pose_msg_.pose.position.y;
+            t.transform.translation.z = ros_pose_msg_.pose.position.z;
+            t.transform.rotation.w = ros_pose_msg_.pose.orientation.w;
+            t.transform.rotation.x = ros_pose_msg_.pose.orientation.x;
+            t.transform.rotation.y = ros_pose_msg_.pose.orientation.y;
+            t.transform.rotation.z = ros_pose_msg_.pose.orientation.z;
+            tf_broadcaster_->sendTransform(t);
+        }
     }
 }
 
