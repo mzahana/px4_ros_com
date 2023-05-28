@@ -104,6 +104,8 @@ PX4ROS::PX4ROS(/* args */): Node("px4_ros")
     ros_vis_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "vio/ros_odom", qos, std::bind(&PX4ROS::rosVisualOdomCallback, this, _1));
 
+    RCLCPP_INFO(this->get_logger(), "%s has started ..." ,this->get_name());
+
 }
 
 void
