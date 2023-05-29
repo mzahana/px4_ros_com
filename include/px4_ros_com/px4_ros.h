@@ -199,10 +199,15 @@ PX4ROS::px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg)
             // @todo publish TF
             geometry_msgs::msg::TransformStamped t;
             t.header = ros_odom_msg_.header;
-            if(std::string(this->get_namespace()).empty())
+            if(std::string(this->get_namespace()).empty()){
+                RCLCPP_INFO(this->get_logger(), "Namspace shoud be empty is %s" , this->get_namespace());
                 t.child_frame_id = baselink_frame_id_;
-            else
+            }
+            else{
+                RCLCPP_INFO(this->get_logger(), "Namspace is %s" , this->get_namespace());
                 t.child_frame_id = std::string(this->get_namespace()) +"/" + baselink_frame_id_;
+            }
+                
 
             t.transform.translation.x = ros_pose_msg_.pose.position.x;
             t.transform.translation.y = ros_pose_msg_.pose.position.y;
