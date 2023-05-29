@@ -40,7 +40,7 @@ def generate_launch_description():
     vio_topic = LaunchConfiguration('vio_topic')
     vio_topic_launch_arg = DeclareLaunchArgument(
         'vio_topic',
-        default_value='/fmu/in/vehicle_visual_odometry'
+        default_value='vio/ros_odom'
     )
 
     ## TODO Need to add parameter to enable/disable tf
