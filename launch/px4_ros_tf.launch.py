@@ -47,9 +47,9 @@ def generate_launch_description():
         name='px4_ros_com',
         namespace=ns,
         parameters=[{'publish_tf': publish_tf},
-                    {'tf_period': tf_period}, 
+                    {'tf_pub_period': tf_period}, 
                     {'odom_frame': odom_frame},
-                    {'base_link': base_link}
+                    {'baselink_frame': base_link}
                     ],
         remappings=[('vio/ros_odom', 'vio/ros_odom')]
     )

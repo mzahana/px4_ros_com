@@ -173,7 +173,11 @@ PX4ROS::px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg)
     ros_odom_msg_.twist.twist.angular.y = angular_vel_ros.y();
     ros_odom_msg_.twist.twist.angular.z = angular_vel_ros.z();
 
-    ros_odom_msg_.header.frame_id =std::string(this->get_namespace())+"/"+ odom_frame_id_;
+    if(std::string(this->get_namespace()).empty())
+        ros_odom_msg_.header.frame_id = odom_frame_id_;
+    else
+        ros_odom_msg_.header.frame_id =std::string(this->get_namespace())+"/"+ odom_frame_id_;
+
     ros_odom_msg_.header.stamp = this->get_clock()->now();
     ros_odom_msg_.child_frame_id = baselink_frame_id_;
 
@@ -195,7 +199,10 @@ PX4ROS::px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg)
             // @todo publish TF
             geometry_msgs::msg::TransformStamped t;
             t.header = ros_odom_msg_.header;
-            t.child_frame_id = std::string(this->get_namespace()) +"/" + baselink_frame_id_;
+            if(std::string(this->get_namespace()).empty())
+                t.child_frame_id = baselink_frame_id_;
+            else
+                t.child_frame_id = std::string(this->get_namespace()) +"/" + baselink_frame_id_;
 
             t.transform.translation.x = ros_pose_msg_.pose.position.x;
             t.transform.translation.y = ros_pose_msg_.pose.position.y;
