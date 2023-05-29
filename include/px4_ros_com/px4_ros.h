@@ -106,6 +106,8 @@ PX4ROS::PX4ROS(/* args */): Node("px4_ros")
 
     RCLCPP_INFO(this->get_logger(), "%s has started ..." ,this->get_name());
 
+    RCLCPP_INFO(this->get_logger(), "Namespace %s" ,this->get_namespace());
+
 }
 
 void
@@ -173,7 +175,7 @@ PX4ROS::px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg)
     ros_odom_msg_.twist.twist.angular.y = angular_vel_ros.y();
     ros_odom_msg_.twist.twist.angular.z = angular_vel_ros.z();
 
-    if(std::string(this->get_namespace()).empty())
+    if(std::string(this->get_namespace()) == "/")
         ros_odom_msg_.header.frame_id = odom_frame_id_;
     else
         ros_odom_msg_.header.frame_id =std::string(this->get_namespace())+"/"+ odom_frame_id_;
@@ -199,12 +201,12 @@ PX4ROS::px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg)
             // @todo publish TF
             geometry_msgs::msg::TransformStamped t;
             t.header = ros_odom_msg_.header;
-            if(std::string(this->get_namespace()).empty()){
-                RCLCPP_INFO(this->get_logger(), "Namspace shoud be empty is %s" , this->get_namespace());
+            if(std::string(this->get_namespace()) == "/"){
+                // RCLCPP_INFO(this->get_logger(), "Namspace shoud be empty is %s" , this->get_namespace());
                 t.child_frame_id = baselink_frame_id_;
             }
             else{
-                RCLCPP_INFO(this->get_logger(), "Namspace is %s" , this->get_namespace());
+                // RCLCPP_INFO(this->get_logger(), "Namspace is %s" , this->get_namespace());
                 t.child_frame_id = std::string(this->get_namespace()) +"/" + baselink_frame_id_;
             }
                 
