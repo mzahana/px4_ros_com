@@ -66,7 +66,7 @@ def generate_launch_description():
     ld.add_action(base_link_launch_arg)
     ld.add_action(tf_period_launch_arg)
     ld.add_action(publish_tf_launch_arg)
-    ld.add_action(px4_ros_node)
     ld.add_action(vio_topic_launch_arg)
+    ld.add_action(px4_ros_node)
 
     return ld
