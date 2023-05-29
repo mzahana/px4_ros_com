@@ -37,6 +37,12 @@ def generate_launch_description():
         default_value='True'
     )
 
+    vio_topic = LaunchConfiguration('vio_topic')
+    vio_topic_launch_arg = DeclareLaunchArgument(
+        'vio_topic',
+        default_value='/fmu/in/vehicle_visual_odometry'
+    )
+
     ## TODO Need to add parameter to enable/disable tf
     ## This is important to avoid conflicts with the TF published by the SLAM system
     ##  
@@ -51,7 +57,7 @@ def generate_launch_description():
                     {'odom_frame': odom_frame},
                     {'baselink_frame': base_link}
                     ],
-        remappings=[('vio/ros_odom', 'vio/ros_odom')]
+        remappings=[('vio/ros_odom', vio_topic)]
     )
     
     ld = LaunchDescription()
@@ -61,5 +67,6 @@ def generate_launch_description():
     ld.add_action(tf_period_launch_arg)
     ld.add_action(publish_tf_launch_arg)
     ld.add_action(px4_ros_node)
+    ld.add_action(vio_topic_launch_arg)
 
     return ld
