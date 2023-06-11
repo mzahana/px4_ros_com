@@ -9,8 +9,10 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include "tf2_ros/transform_broadcaster.h"
 #include <px4_msgs/msg/vehicle_odometry.hpp>
+#include <px4_msgs/msg/sensor_combined.hpp>
 // #include <px4_msgs/msg/vehicle_attitude_setpoint.hpp>
 // #include <px4_msgs/msg/vehicle_rates_setpoint.hpp>
 // #include <px4_msgs/msg/trajectory_setpoint.hpp>
@@ -43,12 +45,14 @@ private:
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_; /**< Publisher for Odometry ROS msg  */
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_; /**< Publisher for pose stamped ROS msg  */
     rclcpp::Publisher<px4_msgs::msg::VehicleOdometry>::SharedPtr vis_odom_pub_; /**< Publisher for fmu/in/vehicle_visual_odometry */
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_; /**< Publisher for IMU ROS msg  */
 
     // rclcpp::Publisher<px4_msgs::msg::VehicleAttitudeSetpoint>::SharedPtr att_sp_pub_; /**< Publishes to px4 fmu/in/vehicle_attitude_setpoint topic  */
     // rclcpp::Publisher<px4_msgs::msg::VehicleRatesSetpoint>::SharedPtr rates_sp_pub_; /**< Publishes to px4 fmu/in/vehicle_rates_setpoint  */
     // rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr trajectory_sp_pub_; /**< Publishes to px4 fmu/in/trajectory_setpoint  */
 
     rclcpp::Subscription<px4_msgs::msg::VehicleOdometry>::SharedPtr px4_odom_sub_;/**< Subscriber to px4 odometry. */
+    rclcpp::Subscription<px4_msgs::msg::SensorCombined>::SharedPtr px4_imu_sub_;/**< Subscriber to px4 imu. */
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr ros_vis_odom_sub_;/**< Subscriber to ROS visual odometry. */
 
     /**
@@ -56,6 +60,12 @@ private:
      * @param msg [px4_msgs::msg::VehicleOdometry] 
     */
     void px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg);
+
+    /**
+     * @brief Callback for PX4 imu. Converts PX4 imu msg to ROS imu msg
+     * @param msg [px4_msgs::msg::SensorCombined] 
+    */
+    void px4ImuCallback(const px4_msgs::msg::SensorCombined & msg);
 
     /**
      * @brief Converts ROS odom topic to PX4 visual odom topic.
@@ -95,11 +105,15 @@ PX4ROS::PX4ROS(/* args */): Node("px4_ros")
     odom_pub_ =  this->create_publisher<nav_msgs::msg::Odometry>("px4_ros/odom", 10);
     pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("px4_ros/pose", 10);
     vis_odom_pub_ = this->create_publisher<px4_msgs::msg::VehicleOdometry>("fmu/in/vehicle_visual_odometry", 10);
+    imu_pub_ =  this->create_publisher<sensor_msgs::msg::Imu>("px4_ros/imu", 10);
 
     rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 		auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
     px4_odom_sub_ = this->create_subscription<px4_msgs::msg::VehicleOdometry>(
     "fmu/out/vehicle_odometry", qos, std::bind(&PX4ROS::px4OdomCallback, this, _1));
+
+    px4_imu_sub_ = this->create_subscription<px4_msgs::msg::SensorCombined>(
+    "fmu/out/sensor_combined", qos, std::bind(&PX4ROS::px4ImuCallback, this, _1));
 
     ros_vis_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "vio/ros_odom", qos, std::bind(&PX4ROS::rosVisualOdomCallback, this, _1));
@@ -308,6 +322,50 @@ PX4ROS::rosVisualOdomCallback(const nav_msgs::msg::Odometry & msg)
     px4_odom_msg.orientation_variance[2] = cov_rot_px4[8];
     
     vis_odom_pub_->publish(px4_odom_msg);
+}
+
+void
+PX4ROS::px4ImuCallback(const px4_msgs::msg::SensorCombined & msg)
+{
+    Eigen::Vector3d gyro_frd(msg.gyro_rad[0], msg.gyro_rad[1], msg.gyro_rad[2]);
+    Eigen::Vector3d accel_frd(msg.accelerometer_m_s2[0], msg.accelerometer_m_s2[1], msg.accelerometer_m_s2[2]);
+
+    Eigen::Vector3d gyro_flu = aircraft_to_baselink_body_frame(gyro_frd);
+    Eigen::Vector3d accel_flu = aircraft_to_baselink_body_frame(accel_frd);
+
+    sensor_msgs::msg::Imu imu_ros_msg;
+
+    // @todo IMPORTANT Need to figure out the timestamp synchronization
+    imu_ros_msg.header.frame_id = baselink_frame_id_;
+    // imu_ros_msg.header.stamp = 
+    imu_ros_msg.header.stamp = this->get_clock()->now();
+
+    imu_ros_msg.orientation.w = 0.0;
+    imu_ros_msg.orientation_covariance = {
+        -1.0, 0.0, 0.0,
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0
+    };
+    
+    imu_ros_msg.linear_acceleration.x = accel_flu.x();
+    imu_ros_msg.linear_acceleration.y = accel_flu.y();
+    imu_ros_msg.linear_acceleration.z = accel_flu.z();
+    imu_ros_msg.linear_acceleration_covariance = {
+        0.01, 0.0, 0.0,
+        0.0, 0.01, 0.0,
+        0.0, 0.0, 0.01
+    };
+
+    imu_ros_msg.angular_velocity.x = gyro_flu.x();
+    imu_ros_msg.angular_velocity.y = gyro_flu.y();
+    imu_ros_msg.angular_velocity.z = gyro_flu.z();
+    imu_ros_msg.angular_velocity_covariance = {
+        0.01, 0.0, 0.0,
+        0.0, 0.01, 0.0,
+        0.0, 0.0, 0.01
+    };
+
+    imu_pub_->publish(imu_ros_msg);
 }
 
 #endif
