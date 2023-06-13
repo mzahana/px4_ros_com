@@ -194,7 +194,9 @@ PX4ROS::px4OdomCallback(const px4_msgs::msg::VehicleOdometry & msg)
     else
         ros_odom_msg_.header.frame_id =std::string(this->get_namespace())+"/"+ odom_frame_id_;
 
-    ros_odom_msg_.header.stamp = this->get_clock()->now();
+    ros_odom_msg_.header.stamp.sec = static_cast<int32_t>(msg.timestamp / 1000000);
+    ros_odom_msg_.header.stamp.nanosec = static_cast<uint32_t>((msg.timestamp % 1000000) * 1000);
+    // ros_odom_msg_.header.stamp = this->get_clock()->now();
     ros_odom_msg_.child_frame_id = baselink_frame_id_;
 
     odom_pub_->publish(ros_odom_msg_);
@@ -243,7 +245,8 @@ PX4ROS::rosVisualOdomCallback(const nav_msgs::msg::Odometry & msg)
     px4_msgs::msg::VehicleOdometry px4_odom_msg;
     // It seems that time is updated automatically on PX4 side
     // after v1.14
-    px4_odom_msg.timestamp = 0; //static_cast<uint64_t>(msg.header.stamp.sec*1e6) + static_cast<uint64_t>(msg.header.stamp.nanosec/1e3);
+    // px4_odom_msg.timestamp = 0; //static_cast<uint64_t>(msg.header.stamp.sec*1e6) + static_cast<uint64_t>(msg.header.stamp.nanosec/1e3);
+    px4_odom_msg.timestamp = static_cast<uint64_t>(msg.header.stamp.sec) * 1000000 + static_cast<uint64_t>(msg.header.stamp.nanosec) / 1000;
     px4_odom_msg.timestamp_sample = 0;
 
     px4_odom_msg.pose_frame = px4_odom_msg.POSE_FRAME_FRD;
@@ -339,6 +342,8 @@ PX4ROS::px4ImuCallback(const px4_msgs::msg::SensorCombined & msg)
     imu_ros_msg.header.frame_id = baselink_frame_id_;
     // imu_ros_msg.header.stamp = 
     imu_ros_msg.header.stamp = this->get_clock()->now();
+    imu_ros_msg.header.stamp.sec = static_cast<int32_t>(msg.timestamp / 1000000);
+    imu_ros_msg.header.stamp.nanosec = static_cast<uint32_t>((msg.timestamp % 1000000) * 1000);
 
     imu_ros_msg.orientation.w = 0.0;
     imu_ros_msg.orientation_covariance = {
